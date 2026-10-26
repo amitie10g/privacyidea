@@ -1,0 +1,3 @@
+[submodule "FreeRADIUS"]
+	path = FreeRADIUS
+	url = https://github.com/amitie10g/FreeRADIUS
