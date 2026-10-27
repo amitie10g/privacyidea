@@ -1,0 +1,30 @@
+#!/bin/bash
+set -eu
+cd /opt/privacyidea
+source venv/bin/activate
+
+: "${ADMINPASS:?ADMINPASS is required}"
+export PRIVACYIDEA_CONFIGFILE=/etc/privacyidea/config.cfg
+
+# --- privacyIDEA: first-start setup ---
+[ -f /etc/privacyidea/config.cfg ]  || cp /opt/privacyidea/defaults/pi.cfg /etc/privacyidea/config.cfg
+[ -f /etc/privacyidea/data.sqlite ] || ./pi-manage setup create_tables
+[ -f /etc/privacyidea/enckey ]      || ./pi-manage setup create_enckey
+[ -f /etc/privacyidea/private.pem ] || ./pi-manage setup create_audit_keys
+
+./pi-manage admin list | grep -qw administrator \
+    || ./pi-manage admin add administrator -p "$ADMINPASS"
+
+# --- RADIUS: only started when RADIUS_CLIENTS is set ---
+if [ -n "${RADIUS_CLIENTS:-}" ]; then
+    /opt/privacyidea/radius-setup.sh
+    export RADIUS_AUTOSTART=true
+else
+    echo "RADIUS_CLIENTS is not set: FreeRADIUS will not be started."
+    export RADIUS_AUTOSTART=false
+fi
+
+if [ "${RADIUS_DEBUG:-0}" = 1 ]; then export FR_ARGS="-X"; else export FR_ARGS="-f -l stdout"; fi
+
+# supervisord keeps both services running and restarts them if they die
+exec /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
