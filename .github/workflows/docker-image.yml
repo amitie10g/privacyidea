@@ -9,7 +9,7 @@ permissions:
   packages: write
 
 jobs:
-  Upstream:
+  Build and push:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout
