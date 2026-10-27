@@ -7,10 +7,15 @@ source venv/bin/activate
 export PRIVACYIDEA_CONFIGFILE=/etc/privacyidea/config.cfg
 
 # --- privacyIDEA: first-start setup ---
-[ -f /etc/privacyidea/config.cfg ]  || cp /opt/privacyidea/defaults/pi.cfg /etc/privacyidea/config.cfg
-[ -f /etc/privacyidea/data.sqlite ] || ./pi-manage setup create_tables
-[ -f /etc/privacyidea/enckey ]      || ./pi-manage setup create_enckey
-[ -f /etc/privacyidea/private.pem ] || ./pi-manage setup create_audit_keys
+[ -f /etc/privacyidea/config.cfg ]      || cp /opt/privacyidea/defaults/pi.cfg /etc/privacyidea/config.cfg
+# The JWT signing key must be identical in every gunicorn worker and survive
+# restarts; otherwise each process generates its own random key and logins fail
+# with "Signature verification failed". Generate it once and persist it.
+[ -s /etc/privacyidea/secret_key ] || { umask 077; head -c 48 /dev/urandom | base64 | tr -d '\n' > /etc/privacyidea/secret_key; }
+export SECRET_KEY="$(cat /etc/privacyidea/secret_key)"
+[ -f /var/lib/privacyidea/data.sqlite ] || ./pi-manage setup create_tables
+[ -f /etc/privacyidea/enckey ]          || ./pi-manage setup create_enckey
+[ -f /etc/privacyidea/private.pem ]     || ./pi-manage setup create_audit_keys
 
 ./pi-manage admin list | grep -qw administrator \
     || ./pi-manage admin add administrator -p "$ADMINPASS"
