@@ -71,6 +71,9 @@ DEBUG=false
         printf '%s\n' "$RADIUS_INI_EXTRA"
     fi
 } > /etc/privacyidea/rlm_perl.ini
+# FreeRADIUS (group freerad) must be able to read the plugin config
+chown root:freerad /etc/privacyidea/rlm_perl.ini
+chmod 640 /etc/privacyidea/rlm_perl.ini
 
 # --- RADIUS clients (the firewalls) ---
 {
